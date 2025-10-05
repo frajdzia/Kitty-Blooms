@@ -1,107 +1,89 @@
-// Initialize Leaflet map centered on Poland
-const map = L.map('map').setView([52, 19], 6); // Center on Poland, zoom level 6
+// Initialize Leaflet map centered on Rzeszow
+const map = L.map('map').setView([50, 21], 8); // Rzeszow location
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// Initialize ML model
+let currentMarkers = [];
 const nn = ml5.neuralNetwork({ task: 'regression', noTraining: true });
 
-// Fetch current MODIS NDVI data for Poland region
+// Show/hide loader
+const loader = document.getElementById('loader');
+function showLoader() { loader.style.display = 'block'; }
+function hideLoader() { loader.style.display = 'none'; }
+
+// Fetch MODIS NDVI data for Rzeszow region (CSV)
 let dataByMonth = {};
-async function fetchData() {
-    try {
-        const response = await fetch('https://modis.ornl.gov/rst/api/v1/MOD13Q1/subset?latitude=52&longitude=19&startDate=A2024193&endDate=A2024273&kmAboveBelow=50&kmLeftRight=50');
-        if (!response.ok) throw new Error('API request failed: ' + response.status);
-        const data = await response.json();
-        console.log('API Data:', data); // Debug
-        if (!data.subset || !Array.isArray(data.subset)) {
-            throw new Error('Invalid or empty subset in API response');
-        }
-        data.subset.forEach(point => {
-            if (!point.modis_date || typeof point.modis_date !== 'string' || point.band !== '250m_16_days_NDVI' || !point.calendar_date) {
-                console.warn('Skipping point:', point);
+function loadMockData() {
+    showLoader();
+    Papa.parse('data/filtered_scaled_250m_16_days_NDVI.csv', {
+        download: true,
+        header: true,
+        complete: function(results) {
+            console.log('CSV Data:', results.data);
+            if (results.errors.length > 0) {
+                console.error('CSV Parse Errors:', results.errors);
+                hideLoader();
                 return;
             }
-            const month = point.calendar_date.split('-')[1]; // Extract month from calendar_date (e.g., "07")
-            if (!dataByMonth[month]) dataByMonth[month] = [];
-            dataByMonth[month].push({
-                lat: parseFloat(point.latitude),
-                lng: parseFloat(point.longitude),
-                ndvi: point.value / 10000 // Scale to 0–1
-            });
-        });
-        console.log('Data by Month:', dataByMonth); // Debug
-        if (Object.keys(dataByMonth).length === 0) {
-            console.warn('No valid NDVI data parsed from API, using CSV fallback');
-        }
-        updateMap('07'); 
-
-    } catch (error) {
-        console.error('Fetch Error:', error);
-        // Fallback to CSV
-        try {
-            Papa.parse('data/modis_ndvi.csv', {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    console.log('CSV Data:', results.data); // Debug
-                    if (results.errors.length > 0) {
-                        console.error('CSV Parse Errors:', results.errors);
-                        return;
-                    }
-                    results.data.forEach(row => {
-                        if (!row.date || !row.latitude || !row.longitude || !row.NDVI) {
-                            console.warn('Skipping invalid CSV row:', row);
-                            return;
-                        }
-                        const month = row.date.split('-')[1];
-                        if (!dataByMonth[month]) dataByMonth[month] = [];
+            results.data.forEach(row => {
+                if (row.latitude && row.longitude && row.NDVI && row.date) {
+                    const month = row.date.split('-')[1]; // Extract month from date
+                    if (!['07', '08', '09'].includes(month)) return; // Limit to July-Sep
+                    if (!dataByMonth[month]) dataByMonth[month] = [];
+                    const lat = parseFloat(row.latitude);
+                    const lng = parseFloat(row.longitude);
+                    const ndvi = parseFloat(row.NDVI);
+                    // Filter for 100 km around Rzeszow (approx 49.1-50.9N, 19.8-22.2E)
+                    if (lat >= 49.1 && lat <= 50.9 && lng >= 19.8 && lng <= 22.2 && ndvi >= 0.5) {
                         dataByMonth[month].push({
-                            lat: parseFloat(row.latitude),
-                            lng: parseFloat(row.longitude),
-                            ndvi: parseFloat(row.NDVI)
+                            lat: lat,
+                            lng: lng,
+                            ndvi: ndvi
                         });
-                    });
-                    console.log('Data by Month (CSV):', dataByMonth); // Debug
-                    updateMap('07');
-                },
-                error: function(err) {
-                    console.error('CSV Load Error:', err);
+                    }
                 }
             });
-        } catch (csvError) {
-            console.error('CSV Fallback Failed:', csvError);
+            console.log('Data by Month:', dataByMonth);
+            if (Object.keys(dataByMonth).length === 0) {
+                console.warn('No valid NDVI data in CSV for Rzeszow region');
+            }
+            updateMap('07'); // Start with July 2025
+            hideLoader();
+        },
+        error: function(err) {
+            console.error('CSV Load Error:', err);
+            hideLoader();
         }
-    }
+    });
 }
-fetchData();
+loadMockData(); // Trigger mock data load
 
 // Update map based on slider
-let currentMarkers = [];
 function updateMap(month) {
     currentMarkers.forEach(marker => map.removeLayer(marker));
     currentMarkers = [];
 
-    console.log('Updating map for month:', month); // Debug
+    console.log('Updating map for month:', month);
     if (dataByMonth[month]) {
         dataByMonth[month].forEach(point => {
-            console.log('Point:', point); // Debug
-            if (point.ndvi > 0.1) { // Low threshold for Poland
-                const marker = L.circleMarker([point.lat, point.lng], {
-                    radius: 5,
-                    color: '#ff69b4', // Pink for blooms mock color
-                    fillColor: '#ff69b4',
-                    fillOpacity: point.ndvi
-                }).addTo(map);
-                currentMarkers.push(marker);
-            }
+            const marker = L.circleMarker([point.lat, point.lng], {
+                radius: 5,
+                fillColor: '#ff69b4', // Pink for blooming
+                color: '#ff69b4',
+                weight: 1,
+                fillOpacity: Math.min(point.ndvi, 0.8),
+                opacity: 0.8
+            }).addTo(map);
+            currentMarkers.push(marker);
         });
+        console.log('Markers added:', currentMarkers.length);
+    } else {
+        console.warn('No data for month:', month);
     }
-    console.log('Markers added:', currentMarkers.length); // Debug
 
-    const months = { '07': 'July 2024', '08': 'August 2024', '09': 'September 2024' };
-    document.getElementById('monthLabel').textContent = months[month];
+    const months = { '07': 'July 2025', '08': 'August 2025', '09': 'September 2025' };
+    document.getElementById('monthLabel').textContent = months[month] || 'Month';
 }
 
 document.getElementById('monthSlider').addEventListener('input', function() {
@@ -109,7 +91,8 @@ document.getElementById('monthSlider').addEventListener('input', function() {
     updateMap(month);
 });
 
-// ML: Train and predict on click
+// Train and predict on click (work in progress, commented for now)
+/*
 function trainModel(coordinates) {
     const nn = ml5.neuralNetwork({ task: 'regression', noTraining: true });
     const trainingData = ['07', '08', '09'].map((month, index) => {
@@ -119,8 +102,10 @@ function trainModel(coordinates) {
         return point ? { month: index + 7, ndvi: point.ndvi } : null;
     }).filter(Boolean);
 
-    console.log('Training Data:', trainingData); // Debug
-    if (trainingData.length < 2) return { trained: false, model: null };
+    console.log('Training Data:', trainingData);
+    if (trainingData.length < 2 || trainingData.some(d => isNaN(d.ndvi))) {
+        return { trained: false, model: null };
+    }
     trainingData.forEach(data => nn.addData({ month: data.month }, { ndvi: data.ndvi }));
     nn.normalizeData();
     nn.train({ epochs: 50 }, () => console.log('Model trained'));
@@ -167,3 +152,4 @@ map.on('click', function(e) {
             .openOn(map);
     }
 });
+*/

@@ -2,19 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BloomWatch: Poland Blooming</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloomWatch Mock</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>BloomWatch: Current Blooming in Poland</h1>
-    <p>Showing recent blooming data from NASA for Poland (July–September 2025). Click the map for predictions!</p>
+    <h1>BloomWatch Mock: Rzeszow Blooming</h1>
+    <div id="loader" class="loader"></div>
     <div id="map" style="height: 500px;"></div>
-    <input type="range" id="monthSlider" min="0" max="2" value="0">
-    <p id="monthLabel">July 2025</p>
+    <div>
+        <label for="monthSlider">Month: </label>
+        <input type="range" id="monthSlider" min="0" max="2" value="0">
+        <span id="monthLabel">July 2025</span>
+    </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
