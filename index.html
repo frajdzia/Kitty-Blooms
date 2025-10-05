@@ -1,24 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BloomWatch Mock</title>
+    <title>Kitty Blooms</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-    <h1>BloomWatch Mock: Rzeszow Blooming</h1>
+    <h1>Kitty Blooms: Rzeszow Blooming</h1>
     <div id="loader" class="loader"></div>
     <div id="map" style="height: 500px;"></div>
     <div>
         <label for="monthSlider">Month: </label>
-        <input type="range" id="monthSlider" min="0" max="2" value="0">
+        <input type="range" id="monthSlider" min="0" max="9" value="6">
+        <!-- 0=Jan, 6=July, 9=Oct -->
         <span id="monthLabel">July 2025</span>
     </div>
+    <!-- <div id="about">
+        <p>Kitty Blooms: Its a web app visualizing Poland’s blooming areas using NASA’s MODIS NDVI data from the ORNL
+            DAAC API. It displays blooming hotspots (NDVI > 0.3) on a map, with a slider to switch months and an
+            ML-powered popup predicting October blooms. It helps Polish farmers time planting seasons for better crop
+            yields and supports pollinator conservation by identifying bloom hotspots. The project’s creative
+            integration of real-time NASA data and machine learning offers a scalable, user-friendly tool for
+            environmental monitoring. Future enhancements include advanced ML models, 3D Unreal Engine visualization,
+            citizen science contributions, and global bloom tracking. Kitty Blooms addresses the challenge of
+            unpredictable bloom patterns due to climate change, fostering sustainable agriculture and biodiversity.
+        </p>
+    </div> -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>
